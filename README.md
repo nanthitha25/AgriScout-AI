@@ -59,7 +59,7 @@ flowchart TD
     UI -->|GET /api/startups| API
     UI -->|GET /api/analytics| API
     UI -->|POST /api/chat| API
-    UI -->|GET /api/startups/{id}/similar| API
+    UI -->|GET /api/startups/:id/similar| API
     UI -->|GET /api/report/weekly| API
 
     API -->|Load & CRUD| EXCEL
