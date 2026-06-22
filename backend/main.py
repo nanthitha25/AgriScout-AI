@@ -3,7 +3,7 @@ import sys
 import re
 import threading
 from datetime import datetime
-from fastapi import FastAPI, BackgroundTasks, HTTPException, status, Query
+from fastapi import FastAPI, BackgroundTasks, HTTPException, status
 from fastapi.responses import StreamingResponse
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
