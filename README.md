@@ -11,52 +11,64 @@ The system uses **FastAPI** for API routes, **Next.js + TypeScript + Tailwind + 
 The platform splits operations into a background scheduled crawler, a FastAPI REST server, and a Next.js single-page application.
 
 ```mermaid
-graph TD
-    subgraph Frontend [Next.js Dashboard Client]
-        UI[React Dashboard UI]
-        CH[Recharts Analytics]
-        QA[AI Chat Panel]
-        SIM[Similarity Drawer]
+flowchart TD
+    %% Define Styles
+    classDef client fill:#0f172a,stroke:#38bdf8,stroke-width:2px,color:#f8fafc;
+    classDef server fill:#0f172a,stroke:#10b981,stroke-width:2px,color:#f8fafc;
+    classDef storage fill:#0f172a,stroke:#f59e0b,stroke-width:2px,color:#f8fafc;
+    classDef external fill:#0f172a,stroke:#64748b,stroke-width:2px,color:#f8fafc;
+
+    subgraph FE ["💻 Frontend Client (Next.js & TypeScript)"]
+        UI["🖥️ React Dashboard UI"]
+        CH["📊 Recharts Analytics Panel"]
+        QA["💬 AI Chat Widget"]
+        SIM["🔍 Similarity Drawer"]
     end
+    class FE,UI,CH,QA,SIM client;
 
-    subgraph Backend [FastAPI Application Server]
-        API[FastAPI Endpoints]
-        SCH[APScheduler Job]
-        SCR[News Scraper & Crawler]
-        GEM[Gemini AI Engine]
-        FUZ[RapidFuzz Duplicate Engine]
-        EMB[Embedding Similarity Engine]
-        RPT[ReportLab PDF Compiler]
+    subgraph BE ["⚙️ Backend API Server (FastAPI & Uvicorn)"]
+        API["🔌 REST API Endpoints"]
+        SCH["⏱️ APScheduler (Cron Job)"]
+        SCR["🕷️ Scraper & Collector"]
+        FUZ["⚖️ RapidFuzz Deduplication"]
+        EMB["🧠 Embedding similarity engine"]
+        RPT["📄 ReportLab PDF Compiler"]
     end
+    class BE,API,SCH,SCR,FUZ,EMB,RPT server;
 
-    subgraph Storage [Local Workspace Database]
-        EXCEL[(Excel Database: agtech_startups.xlsx)]
-        EMB_CACHE[(Embeddings Cache: startup_embeddings.json)]
+    subgraph DB ["📁 Database Storage (Local Filesystem)"]
+        EXCEL[("Excel DB: agtech_startups.xlsx")]
+        EMB_CACHE[("JSON Cache: startup_embeddings.json")]
     end
+    class DB,EXCEL,EMB_CACHE storage;
 
-    %% Scraper Data Flow
-    SCH -->|Triggers Every 6h| SCR
-    SCR -->|Fetches Feeds| GNEWS[Google News RSS]
-    SCR -->|Filters existing URLs| EXCEL
-    SCR -->|Extracts metadata & categorizes| GEM
-    GEM -->|Structured Outputs| SCR
-    SCR -->|Fuzzy duplicate check| FUZ
-    SCR -->|Progressive Save| EXCEL
+    subgraph EXT ["🌐 External Services"]
+        GNEWS["📰 Google News RSS Feed"]
+        GEMINI["♊ Google Gemini 2.5 Flash API"]
+    end
+    class EXT,GNEWS,GEMINI external;
 
-    %% REST API Interactions
+    %% Flows
+    SCH -->|Triggers Scrape Daily/6h| SCR
+    SCR -->|Reads Feeds| GNEWS
+    SCR -->|Deduplicates URL| EXCEL
+    SCR -->|Structured extraction| GEMINI
+    SCR -->|Fuzzy name duplicate check| FUZ
+    SCR -->|Save rows progressively| EXCEL
+
     UI -->|GET /api/startups| API
     UI -->|GET /api/analytics| API
     UI -->|POST /api/chat| API
     UI -->|GET /api/startups/{id}/similar| API
     UI -->|GET /api/report/weekly| API
 
-    API -->|Read/Write CRUD| EXCEL
-    API -->|Compute Cosine Sim| EMB
-    EMB -->|Embed Description| GEM
-    EMB -->|Cache / Read| EMB_CACHE
-    API -->|Consult Context Q&A| GEM
-    API -->|Compile Report| RPT
-    RPT -->|Read| EXCEL
+    API -->|Load & CRUD| EXCEL
+    API -->|Embedding cosine distance| EMB
+    EMB -->|Request embeddings| GEMINI
+    EMB -->|Cache vectors| EMB_CACHE
+    API -->|Inject data context Q&A| GEMINI
+    API -->|Compile report flow| RPT
+    RPT -->|Load rows| EXCEL
 ```
 
 ---
@@ -66,42 +78,50 @@ graph TD
 The use case diagram illustrates user dashboard operations, background cron scheduler runs, and downstream dependencies on the Gemini AI service.
 
 ```mermaid
-leftToRightDirection
-%% Use Case Diagram
-actor User as "Investor / Analyst"
-actor System as "APScheduler Background Cron"
-actor Gemini as "Gemini AI API"
+flowchart LR
+    %% Define Styles
+    classDef actorStyle fill:#1e293b,stroke:#64748b,stroke-width:2px,color:#f8fafc;
+    classDef usecaseStyle fill:#0f172a,stroke:#10b981,stroke-width:2px,color:#f8fafc;
+    classDef systemUsecase fill:#0f172a,stroke:#f59e0b,stroke-width:2px,color:#f8fafc;
 
-rectangle "AgriScout AI System" {
-    usecase UC1 as "View Tracked Startups & Charts"
-    usecase UC2 as "Search & Filter Startups"
-    usecase UC3 as "Find Semantically Similar Startups"
-    usecase UC4 as "Consult AI Chat Assistant (Natural Language Q&A)"
-    usecase UC5 as "Add Startup Manually"
-    usecase UC6 as "Delete Startup Entry"
-    usecase UC7 as "Download Weekly PDF Intelligence Report"
-    usecase UC8 as "Trigger Manual News Crawl"
-    usecase UC9 as "Periodic Scraping Job (Every 6h)"
-    usecase UC10 as "Extract & Categorize Startup Metadata"
-    usecase UC11 as "Verify Fuzzy Duplicate Matching"
-}
+    %% Actors
+    User["👤 Venture Capitalist / Researcher"]:::actorStyle
+    Cron["🤖 APScheduler Background Cron"]:::actorStyle
+    Gemini["♊ Google Gemini AI Services"]:::actorStyle
 
-User --> UC1
-User --> UC2
-User --> UC3
-User --> UC4
-User --> UC5
-User --> UC6
-User --> UC7
-User --> UC8
+    subgraph SystemBoundary ["AgriScout AI Boundary"]
+        UC1(["📊 View Tracked Startups & Charts"]):::usecaseStyle
+        UC2(["🔍 Search & Filter Startup Logs"]):::usecaseStyle
+        UC3(["✨ Find Semantically Similar Startups"]):::usecaseStyle
+        UC4(["💬 Consult AI Chat Assistant"]):::usecaseStyle
+        UC5(["➕ Add Startup Entry Manually"]):::usecaseStyle
+        UC6(["🗑️ Delete Startup Profile"]):::usecaseStyle
+        UC7(["📥 Download PDF weekly report"]):::usecaseStyle
+        UC8(["⚡ Trigger Manual News Crawl"]):::usecaseStyle
+        UC9(["⏱️ Periodic Scraping Job (6h)"]):::systemUsecase
+        UC10(["🧠 Extract & Categorize Metadata"]):::systemUsecase
+        UC11(["⚖️ Verify Fuzzy duplicate check"]):::systemUsecase
+    end
 
-System --> UC9
-UC9 --> UC10
-UC9 --> UC11
+    %% User Interactions
+    User --> UC1
+    User --> UC2
+    User --> UC3
+    User --> UC4
+    User --> UC5
+    User --> UC6
+    User --> UC7
+    User --> UC8
 
-UC10 --> Gemini
-UC3 --> Gemini
-UC4 --> Gemini
+    %% System Interactions
+    Cron --> UC9
+    UC9 --> UC10
+    UC9 --> UC11
+
+    %% AI dependencies
+    UC10 --> Gemini
+    UC3 --> Gemini
+    UC4 --> Gemini
 ```
 
 ---
