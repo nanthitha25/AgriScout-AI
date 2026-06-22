@@ -124,6 +124,7 @@ export default function Home() {
 
   // Loading indicator for fetching database
   const [isLoadingList, setIsLoadingList] = useState(true);
+  const [isDownloadingPDF, setIsDownloadingPDF] = useState(false);
 
   // Fetch all initial data
   useEffect(() => {
@@ -315,6 +316,36 @@ export default function Home() {
     }
   };
 
+  const handleDownloadPDF = async () => {
+    if (isDownloadingPDF) return;
+    setIsDownloadingPDF(true);
+    try {
+      const res = await fetch(`${API_BASE}/api/report/weekly`);
+      if (!res.ok) {
+        if (res.status === 404) {
+          alert("No startup records available to generate a report.");
+        } else {
+          alert("Failed to generate report. Please check server logs.");
+        }
+        return;
+      }
+      const blob = await res.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `AgriScout_Weekly_Report_${new Date().toISOString().slice(0,10).replace(/-/g, "")}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+    } catch (e) {
+      console.error("PDF download error:", e);
+      alert("Connection error. Could not download the intelligence report.");
+    } finally {
+      setIsDownloadingPDF(false);
+    }
+  };
+
   // Calculations for dashboard indicators
   const countRecentThisWeek = () => {
     const oneWeekAgo = new Date();
@@ -365,13 +396,14 @@ export default function Home() {
               Scan Industry News
             </button>
             
-            <a 
-              href={`${API_BASE}/api/report/weekly`}
-              className="flex-1 md:flex-none bg-slate-800 hover:bg-slate-700 text-white font-semibold py-2.5 px-4 rounded-xl border border-slate-700 transition duration-200 flex items-center justify-center gap-2 text-sm text-center"
+            <button 
+              onClick={handleDownloadPDF}
+              disabled={isDownloadingPDF}
+              className="flex-1 md:flex-none bg-slate-800 hover:bg-slate-700 disabled:opacity-50 text-white font-semibold py-2.5 px-4 rounded-xl border border-slate-700 transition duration-200 flex items-center justify-center gap-2 text-sm text-center"
             >
-              <Download className="w-4 h-4" />
-              Intelligence PDF
-            </a>
+              <Download className={`w-4 h-4 ${isDownloadingPDF ? "animate-bounce" : ""}`} />
+              {isDownloadingPDF ? "Compiling PDF..." : "Intelligence PDF"}
+            </button>
             
             <button 
               onClick={() => setIsModalOpen(true)}
